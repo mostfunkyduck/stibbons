@@ -1,0 +1,8 @@
+[packages]
+scrapy = "*"
+flask  = "*"
+requests = "*"
+geopy  = "*"
+
+[dev-packages]
+pylint = "*"
