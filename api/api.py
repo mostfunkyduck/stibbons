@@ -1,9 +1,8 @@
 import json
 import flask
-import feedgenerator
 from requests import HTTPError
-from flask import request, jsonify, Response
-from lib import forecast, api, location, feed, db
+from flask import request
+from lib import forecast, api, location, feed
 
 app = flask.Flask(__name__)
 
@@ -19,6 +18,18 @@ def get_forecast():
         )
 
     try:
+        refreshInterval = int(request.args.get('refresh'))
+        if not refreshInterval:
+            refreshInterval = 24
+    except (TypeError, ValueError):
+        return api.build_response(
+                status=400,
+                message=json.dumps({
+                    'error': '{request.args.get("refresh")} is not a valid refresh inteval'
+                })
+        )
+
+    try:
         coordinates = location.lookup_coordinates(loc)
     except HTTPError as e:
         status = 400
@@ -27,7 +38,7 @@ def get_forecast():
             bad_status = e.response.status_code
         message = f'error looking up coordinates for {loc}'
         if bad_status:
-           message = f'{message}: got status code "{bad_status}"' 
+            message = f'{message}: got status code "{bad_status}"'
 
         return api.build_response(
             status=status,
@@ -43,7 +54,7 @@ def get_forecast():
             })
         )
     raw_feed = forecast.parse_forecast(url=f'https://forecast.weather.gov/MapClick.php?lat={coordinates["latitude"]}&lon={coordinates["longitude"]}')
-    xml_feed = feed.generate_feed(raw_feed, loc)
+    xml_feed = feed.generate_feed(raw_feed, loc, refreshInterval)
     return api.build_response(
             status=200,
             message=xml_feed

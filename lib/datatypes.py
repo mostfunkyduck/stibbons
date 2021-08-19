@@ -2,7 +2,9 @@
 This lib builds properly formatted dicts for given types
 '''
 from typing import TypedDict, List
+import datetime
 
+### Forecast Types
 ForecastNews = TypedDict('ForecastNews',  {
     'headline': str,
     'body': str,
@@ -33,9 +35,18 @@ FullForecast     = TypedDict('FullForecast', {
     'news': List[ForecastNews],
     'forecast': Forecast
 })
+
+### General DataTypes
 Coordinates = TypedDict('Coordinates', {'longitude': str, 'latitude': str})
 def coordinates(longitude: str, latitude: str) -> Coordinates:
     return {
         'longitude': longitude,
         'latitude': latitude
     }
+
+CachedForecast = TypedDict('CachedForecast', {
+    'location': str,
+    'forecast': str,
+    'last_updated': datetime.datetime,
+    'hazardous_conditions': str
+})
