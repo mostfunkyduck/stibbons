@@ -26,10 +26,11 @@ def lookup_coordinates(location: str) -> Optional[datatypes.Coordinates]:
     Returns:
         a types.coordinates dict or an empty dict if no cached coordinates were found
     '''
-    coordinates = Coordinates.get(Coordinates.location == location)
-    if coordinates:
+    try:
+        coordinates = Coordinates.get(Coordinates.location == location)
         return datatypes.coordinates(coordinates.longitude, coordinates.latitude)
-    return None
+    except peewee.DoesNotExist:
+        return None
 
 def cache_coordinates(location: str, coordinates: datatypes.Coordinates):
     Coordinates.create(location=location, longitude=coordinates['longitude'], latitude=coordinates['latitude'])
