@@ -1,14 +1,16 @@
-import json
-from lib import noaaSelectors
+from lib import scraper, datatypes
 
-def parse_forecast(url: str='', body: str='') -> str:
-    forecast = {}
-    selector                                    = noaaSelectors.init(url=url, text=body)
-    forecast['hazardous_conditions']            = noaaSelectors.hazardous_conditions(selector)
-    forecast['news']                            = noaaSelectors.news(selector)
-    forecast['forecast']                        = {}
-    forecast['forecast']['title']               = noaaSelectors.title(selector)
-    forecast['forecast']['current_headlines']   = noaaSelectors.current_headlines(selector)
-    forecast['forecast']['current_hazards']     = noaaSelectors.current_hazards(selector)
-    forecast['forecast']['daily_forecasts']     = noaaSelectors.daily_forecasts(selector)
-    return json.dumps(forecast)
+def parse_forecast(url: str='', body: str='') -> datatypes.FullForecast:
+    selector = scraper.init(url=url, text=body)
+    forecast = datatypes.Forecast({
+        'title': scraper.title(selector),
+        'current_headlines': scraper.current_headlines(selector),
+        'current_hazards': scraper.current_hazards(selector),
+        'daily_forecasts': scraper.daily_forecasts(selector)
+    })
+    return datatypes.FullForecast({
+        'url': url or 'https://example.com',
+        'hazardous_conditions': scraper.hazardous_conditions(selector),
+        'news': scraper.news(selector),
+        'forecast': forecast
+    })

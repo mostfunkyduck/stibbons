@@ -1,8 +1,12 @@
 [packages]
-scrapy = "*"
-flask  = "*"
-requests = "*"
-geopy  = "*"
+scrapy        = "*"
+flask         = "*"
+requests      = "*"
+geopy         = "*"
+feedgenerator = "*"
+peewee        = "*"
+mypy = "*"
 
 [dev-packages]
 pylint = "*"
+types-requests = "*"

@@ -1,6 +1,7 @@
-from typing import List, Dict
+from typing import List
 import requests
 from scrapy import Selector
+from lib import datatypes
 
 xpaths = {
     'current_headlines_text':   '//div[@id="headline-detail-now"]//div/text()',
@@ -50,7 +51,7 @@ def current_headlines(selector: Selector) -> List[str]:
     )
     return [retrieve_text(each) for each in current_headline_texts]
 
-def news(selector: Selector) -> List[Dict[str, str]]:
+def news(selector: Selector) -> List:
     news_list = []
     news_divs = selector.xpath(
         f'{xpaths["news_div"]}'
@@ -63,14 +64,14 @@ def news(selector: Selector) -> List[Dict[str, str]]:
         })
     return news_list
 
-def hazardous_conditions(selector: Selector) -> List[Dict[str, str]]:
+def hazardous_conditions(selector: Selector) -> List[datatypes.HazardousConditions]:
     condition_list = []
     conditions = selector.xpath(xpaths['hazardous_conditions_list'])
     for condition in conditions:
-        condition_list.append({
+        condition_list.append(datatypes.HazardousConditions({
             'condition': retrieve_text(condition.xpath(xpaths['hazardous_condition_text'])),
-            'details_link': retrieve_text(condition.xpath(xpaths['hazardous_condition_link']))
-        })
+            'details_link': 'https://forecast.weather.gov/' + retrieve_text(condition.xpath(xpaths['hazardous_condition_link']))
+        }))
     return condition_list
 
 def current_hazards(selector: Selector) -> List[str]:
@@ -78,16 +79,16 @@ def current_hazards(selector: Selector) -> List[str]:
     hazards = [retrieve_text(each.xpath(xpaths['current_hazard_texts'])) for each in cur_hazards]
     return hazards
 
-def daily_forecasts(selector: Selector) -> List[Dict[str, str]]:
+def daily_forecasts(selector: Selector) -> List[datatypes.DailyForecast]:
     forecasts = []
     full_list = selector.xpath(xpaths['forecast_list'])
     for item in full_list:
-        forecasts.append({
+        forecasts.append(datatypes.DailyForecast({
             'period': retrieve_text(item.xpath(xpaths['forecast_period'])),
             'description': retrieve_text(item.xpath(xpaths['forecast_description'])),
             'short_description': retrieve_text(item.xpath(xpaths['forecast_short_desc'])),
             'temperature': retrieve_text(item.xpath(xpaths['forecast_temp']))
-        })
+        }))
     return forecasts
 
 def init(url: str='', text: str='') -> Selector:
