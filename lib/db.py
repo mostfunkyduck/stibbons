@@ -3,7 +3,7 @@ from typing import Optional
 import peewee
 from lib import config, datatypes
 
-db = peewee.SqliteDatabase(config.DB_PATH)
+db = peewee.SqliteDatabase(config.STIBBONS_DB_PATH)
 LAST_UPDATED_FORMAT = '%Y-%m-%d:%H:%M:%S'
 
 class BaseModel(peewee.Model):

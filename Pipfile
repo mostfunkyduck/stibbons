@@ -6,7 +6,9 @@ geopy         = "*"
 feedgenerator = "*"
 peewee        = "*"
 mypy = "*"
+waitress = "*"
 
 [dev-packages]
 pylint = "*"
 types-requests = "*"
+types-waitress = "*"

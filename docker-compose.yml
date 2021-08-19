@@ -1,0 +1,11 @@
+---
+version: '3'
+services:
+  stibbons:
+    build: .
+    image: mostfunkyduck/stibbons
+    ports:
+      - '5000:5000'
+    volumes:
+      - ./db:/usr/src/stibbons/db
+    restart: always
