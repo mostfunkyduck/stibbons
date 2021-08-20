@@ -59,5 +59,5 @@ def hacky_access_log(response):
     '''
     timestamp = datetime.datetime.utcnow().strftime('[%Y-%b-%d %H:%M]')
     logger = logging.getLogger(ACCESS_LOGGER_NAME)
-    logger.info('%s %s %s %s %s %s', timestamp, request.remote_addr, request.method, request.scheme, request.full_path, response.status)
+    logger.info('%s %s %s %s %s %s %s', timestamp, request.headers.get('X-Forwarded-For'), request.remote_addr, request.method, request.scheme, request.full_path, response.status)
     return response

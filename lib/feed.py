@@ -43,7 +43,7 @@ def generate_feed(forecast: datatypes.FullForecast, location: str) -> str:
     if cached_forecast and cached_forecast['forecast']['last_updated'] == forecast['last_updated']:
         return cached_forecast['feed_XML']
 
-    if cached_forecast['forecast']['hazardous_conditions'] != hazardous_conditions:
+    if cached_forecast and cached_forecast['forecast']['hazardous_conditions'] != hazardous_conditions:
         feed.add_item(
             title=forecast['forecast']['title'] + ' - Hazardous Conditions Updated!',
             pubdate=now,
