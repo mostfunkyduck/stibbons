@@ -16,7 +16,7 @@ def _hazardous_conditions(conditions: List[datatypes.HazardousConditions]) -> st
     hazards = []
     for hazard in conditions:
         hazards.append(f'<a href={hazard["details_link"]}>{hazard["condition"]}</a>')
-    return "<br/>".join(hazards)
+    return "<br/>".join(hazards) or "None"
 
 def _news(items: List[datatypes.ForecastNews]):
     news_items = []
@@ -43,7 +43,7 @@ def generate_feed(forecast: datatypes.FullForecast, location: str) -> str:
     if cached_forecast and cached_forecast['forecast']['last_updated'] == forecast['last_updated']:
         return cached_forecast['feed_XML']
 
-    if cached_forecast and cached_forecast['forecast']['hazardous_conditions'] != hazardous_conditions:
+    if cached_forecast and cached_forecast['forecast']['hazardous_conditions'] != forecast['hazardous_conditions']:
         feed.add_item(
             title=forecast['forecast']['title'] + ' - Hazardous Conditions Updated!',
             pubdate=now,
@@ -60,7 +60,7 @@ def generate_feed(forecast: datatypes.FullForecast, location: str) -> str:
 
     full_forecast = _forecast(forecast['forecast']['daily_forecasts'])
 
-    current_hazards = "<br/>".join(forecast['forecast']['current_hazards'])
+    current_hazards = "<br/>".join(forecast['forecast']['current_hazards']) or "None"
 
     feed.add_item(
         title=forecast['forecast']['title'],
