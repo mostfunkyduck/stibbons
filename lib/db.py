@@ -1,10 +1,9 @@
-import datetime
+import json
 from typing import Optional
 import peewee
 from lib import config, datatypes
 
 db = peewee.SqliteDatabase(config.STIBBONS_DB_PATH)
-LAST_UPDATED_FORMAT = '%Y-%m-%d:%H:%M:%S'
 
 class BaseModel(peewee.Model):
     class Meta:
@@ -18,8 +17,7 @@ class Coordinates(BaseModel):
 class CachedForecast(BaseModel):
     location                =   peewee.CharField()
     forecast                =   peewee.CharField()
-    last_updated            =   peewee.CharField()
-    hazardous_conditions    =   peewee.CharField()
+    feed_XML                =   peewee.CharField()
 
 def init():
     db.connect()
@@ -55,17 +53,15 @@ def lookup_cached_forecast(location: str) -> Optional[datatypes.CachedForecast]:
         cached = CachedForecast.get(CachedForecast.location == location)
         return datatypes.CachedForecast({
            'location': cached.location,
-           'forecast': cached.forecast,
-           'last_updated': datetime.datetime.strptime(cached.last_updated, LAST_UPDATED_FORMAT),
-           'hazardous_conditions': cached.hazardous_conditions
+           'forecast': json.loads(cached.forecast),
+           'feed_XML': cached.feed_XML
         })
     except peewee.DoesNotExist:
         return None
 
-def cache_forecast(location: str, forecast: str, hazardous_conditions: str):
+def cache_forecast(location: str, forecast: str, feed_XML: str):
     CachedForecast.create(
         location=location,
         forecast=forecast,
-        last_updated=datetime.datetime.now().strftime(LAST_UPDATED_FORMAT),
-        hazardous_conditions=hazardous_conditions
+        feed_XML=feed_XML
     )

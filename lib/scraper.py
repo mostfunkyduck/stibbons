@@ -32,12 +32,21 @@ xpaths = {
     'forecast_period':          './/p[@class="period-name"]/text()',
     'forecast_description':     './/p/img[@class="forecast-icon"]/@title',
     'forecast_short_desc':      './/p[@class="short-desc"]//text()',
-    'forecast_temp':            './/p[contains(@class, "temp")]/text()'
+    'forecast_temp':            './/p[contains(@class, "temp")]/text()',
+
+    # When this was last updated
+    'last_updated':             '//div[@id="about_forecast"]//text()'
 }
 def retrieve_text(selector: Selector) -> str:
     text = ' '.join(selector.getall()) or ''
     if text:
         text = text.strip()
+    return text
+
+def last_updated(selector: Selector) -> str:
+    text = retrieve_text(selector.xpath(
+        xpaths['last_updated']
+    ))
     return text
 
 def title(selector: Selector) -> str:

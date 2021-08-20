@@ -1,3 +1,4 @@
+import json
 from typing import List
 import datetime
 import feedgenerator
@@ -25,8 +26,7 @@ def _news(items: List[datatypes.ForecastNews]):
             <p><i>{item['body']}</i></p>''')
     return "<br/>".join(news_items) or 'None'
 
-
-def generate_feed(forecast: datatypes.FullForecast, location: str, refreshInterval: int) -> str:
+def generate_feed(forecast: datatypes.FullForecast, location: str) -> str:
     now = datetime.datetime.utcnow()
     # build out hazardous conditions and the basics first since that may preempt returning our cached forecast
     feed = feedgenerator.Rss201rev2Feed(
@@ -38,22 +38,23 @@ def generate_feed(forecast: datatypes.FullForecast, location: str, refreshInterv
     hazardous_conditions = _hazardous_conditions(forecast['hazardous_conditions'])
 
     cached_forecast = db.lookup_cached_forecast(location)
-    # only publish a new post if it's been 6 hours since the last one or if there are new advisories
-    if cached_forecast and cached_forecast['last_updated'] < now + datetime.timedelta(hours=refreshInterval):
-        if cached_forecast['hazardous_conditions'] != hazardous_conditions:
-            feed.add_item(
-                title=forecast['forecast']['title'] + ' - New Hazardous Conditions!',
-                pubdate=datetime.datetime.utcnow(),
-                link=forecast['url'],
-                description=f'''<h0>Current Hazardous Conditions Advisories</h1>
-        <p>{hazardous_conditions}</p>
-        <br/>
-        <h0>Previous Hazardous Conditions Advisories</h1>
-        <p>{cached_forecast["hazardous_conditions"]}</p>
-        <br/>
-        ''')
-            return feed.writeString('utf-8')
-        return cached_forecast['forecast']
+
+    # only publish a new post if the forecast's "last_updated" field has changed
+    if cached_forecast and cached_forecast['forecast']['last_updated'] == forecast['last_updated']:
+        return cached_forecast['feed_XML']
+
+    if cached_forecast['forecast']['hazardous_conditions'] != hazardous_conditions:
+        feed.add_item(
+            title=forecast['forecast']['title'] + ' - Hazardous Conditions Updated!',
+            pubdate=now,
+            link=forecast['url'],
+            description=f'''<h0>Current Hazardous Conditions Advisories</h1>
+    <p>{hazardous_conditions}</p>
+    <br/>
+    <h0>Previous Hazardous Conditions Advisories</h1>
+    <p>{cached_forecast["forecast"]["hazardous_conditions"]}</p>
+    <br/>
+    ''')
 
     news = _news(forecast['news'])
 
@@ -63,7 +64,7 @@ def generate_feed(forecast: datatypes.FullForecast, location: str, refreshInterv
 
     feed.add_item(
         title=forecast['forecast']['title'],
-        pubdate=datetime.datetime.utcnow(),
+        pubdate=now,
         link=forecast['url'],
         description=f'''<h1>Current News</h1>
 <p>
@@ -82,5 +83,5 @@ def generate_feed(forecast: datatypes.FullForecast, location: str, refreshInterv
 {full_forecast}</p>''')
 
     final_forecast = feed.writeString('utf-8')
-    db.cache_forecast(location, final_forecast, hazardous_conditions)
+    db.cache_forecast(location, json.dumps(forecast), final_forecast)
     return final_forecast

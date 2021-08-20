@@ -26,7 +26,8 @@ Forecast = TypedDict('Forecast', {
     'title': str,
     'current_headlines': List[str],
     'current_hazards': List[str],
-    'daily_forecasts': List[DailyForecast]
+    'daily_forecasts': List[DailyForecast],
+    'last_updated': str
 })
 
 FullForecast     = TypedDict('FullForecast', {
@@ -46,7 +47,6 @@ def coordinates(longitude: str, latitude: str) -> Coordinates:
 
 CachedForecast = TypedDict('CachedForecast', {
     'location': str,
-    'forecast': str,
-    'last_updated': datetime.datetime,
-    'hazardous_conditions': str
+    'forecast': Forecast,
+    'feedXML': str
 })
