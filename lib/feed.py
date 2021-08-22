@@ -28,8 +28,7 @@ def _news(items: List[datatypes.ForecastNews]):
 
 def generate_feed(forecast: datatypes.FullForecast, location: str) -> str:
     now = datetime.datetime.utcnow()
-    # build out hazardous conditions and the basics first since that may preempt returning our cached forecast
-    feed = feedgenerator.Rss201rev2Feed(
+    feed = feedgenerator.Atom1Feed(
         title=f'Weather for {location}',
         link=forecast['url'],
         description='Weather forecasts, backed by data lovingly scraped from NOAA',
@@ -48,10 +47,12 @@ def generate_feed(forecast: datatypes.FullForecast, location: str) -> str:
             title=forecast['forecast']['title'] + ' - Hazardous Conditions Updated!',
             pubdate=now,
             link=forecast['url'],
-            description=f'''<h0>Current Hazardous Conditions Advisories</h1>
-    <p>{hazardous_conditions}</p>
+            unique_id=forecast['hazardous_conditions'],
+            description='Hazardous Conditions Advisory Update',
+            content=f'''<h1>Current Hazardous Conditions Advisories</h1>
+    <p>{forecast['hazardous_conditions']}</p>
     <br/>
-    <h0>Previous Hazardous Conditions Advisories</h1>
+    <h1>Previous Hazardous Conditions Advisories</h1>
     <p>{cached_forecast["forecast"]["hazardous_conditions"]}</p>
     <br/>
     ''')
@@ -63,10 +64,12 @@ def generate_feed(forecast: datatypes.FullForecast, location: str) -> str:
     current_hazards = "<br/>".join(forecast['forecast']['current_hazards']) or "None"
 
     feed.add_item(
-        title=forecast['forecast']['title'],
+        title=f'{forecast["forecast"]["title"]} - {forecast["last_updated"]}',
         pubdate=now,
+        unique_id=forecast["last_updated"],
         link=forecast['url'],
-        description=f'''<h1>Current News</h1>
+        description='Current Forecast',
+        content=f'''<h1>Current News</h1>
 <p>
 <b>{news}</b>
 </p>

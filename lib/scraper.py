@@ -35,7 +35,7 @@ xpaths = {
     'forecast_temp':            './/p[contains(@class, "temp")]/text()',
 
     # When this was last updated
-    'last_updated':             '//div[@id="about_forecast"]//text()'
+    'last_updated':             '//div[@id="about_forecast"]/div[2]/div[2]/text()'
 }
 def retrieve_text(selector: Selector) -> str:
     text = ' '.join(selector.getall()) or ''
