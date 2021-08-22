@@ -34,5 +34,5 @@ def lookup_coordinates(location: str) -> Optional[datatypes.Coordinates]:
         return None
 
     coordinates = datatypes.coordinates(loc.longitude, loc.latitude)
-    db.cache_coordinates(loc, coordinates)
+    db.cache_coordinates(location, coordinates)
     return coordinates

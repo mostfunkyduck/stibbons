@@ -10,12 +10,12 @@ class BaseModel(peewee.Model):
         database = db
 
 class Coordinates(BaseModel):
-    location    =   peewee.CharField()
+    location    =   peewee.CharField(unique=True)
     longitude   =   peewee.CharField()
     latitude    =   peewee.CharField()
 
 class CachedForecast(BaseModel):
-    location                =   peewee.CharField()
+    location                =   peewee.CharField(unique=True)
     forecast                =   peewee.CharField()
     feed_XML                =   peewee.CharField()
 
@@ -60,8 +60,8 @@ def lookup_cached_forecast(location: str) -> Optional[datatypes.CachedForecast]:
         return None
 
 def cache_forecast(location: str, forecast: str, feed_XML: str):
-    CachedForecast.create(
+    CachedForecast.insert(
         location=location,
         forecast=forecast,
         feed_XML=feed_XML
-    )
+    ).on_conflict('replace').execute()
