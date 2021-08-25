@@ -7,6 +7,7 @@ feedgenerator = "*"
 peewee        = "*"
 waitress      = "*"
 sendgrid      = "*"
+pyyaml        = "*"
 
 [dev-packages]
 pylint          = "*"
