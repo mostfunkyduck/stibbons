@@ -59,7 +59,8 @@ def get_forecast():
     xml_feed = feed.generate_feed(raw_feed, loc)
     return api.build_response(
             status=200,
-            message=xml_feed
+            message=xml_feed,
+            mimetype='application/atom+xml',
             )
 
 @app.route('/webhook', methods=["POST"])
@@ -124,6 +125,42 @@ def get_feed():
             status=200,
             message=xml_feed
             )
+
+@app.route('/allowlist', methods=['POST', 'GET'])
+def add_to_allowlist():
+    if flask.request.method == 'POST':
+        body = flask.request.json
+        if not body:
+            return api.build_response(
+                status=400,
+                message=json.dumps({
+                    'error': 'empty POST body or no application/json header'
+                })
+            )
+        if 'email' not in body:
+            return api.build_response(
+                status=400,
+                message=json.dumps({
+                    'error': 'no "email" property in body'
+                })
+            )
+        email = body['email']
+        db.add_to_allowlist(email)
+        return api.build_response(
+                status=200,
+                message=json.dumps({
+                    'email': email
+                })
+                )
+
+    if flask.request.method == 'GET':
+        allowlist = config.email_allowlist()
+        return api.build_response(
+            status=200,
+            message=json.dumps({
+               'allowlist': allowlist
+            })
+        )
 
 @app.after_request
 def hacky_access_log(response):

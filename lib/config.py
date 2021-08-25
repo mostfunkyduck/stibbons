@@ -1,6 +1,8 @@
 import os
 from typing import List
 
+from lib import db
+
 def access_log() -> bool:
     return bool(os.environ.get('STIBBONS_ACCESS_LOG'))
 
@@ -15,7 +17,7 @@ def email_allowlist() -> List[str]:
     if allowlist_raw:
         return allowlist_raw.split(',')
     else:
-        return []
+        return [each['email_address'] for each in db.get_allowlist()]
 
 def db_base_path() -> str:
     return os.environ.get('STIBBONS_DB_PATH') or './stibbons.db'

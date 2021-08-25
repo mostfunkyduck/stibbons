@@ -58,3 +58,7 @@ FeedEntry    = TypedDict('FeedEntry',  {
     'title':        str,
     'unique_id':    str,
 })
+
+NewsletterAllowlist =   TypedDict('NewsletterAllowlist', {
+    'email_address': str
+})

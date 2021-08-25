@@ -26,9 +26,23 @@ class FeedEntry(BaseModel):
     title           =   peewee.CharField()
     unique_id       =   peewee.CharField(unique=True)
 
+class NewsletterAllowlist(BaseModel):
+    email_address   =   peewee.CharField(unique=True)
+
 def init():
     db.connect()
-    db.create_tables([Coordinates, CachedForecast, FeedEntry])
+    db.create_tables([Coordinates, CachedForecast, FeedEntry, NewsletterAllowlist])
+
+def add_to_allowlist(email_address: str):
+    NewsletterAllowlist.get_or_create(
+        email_address=email_address
+    )
+
+def get_allowlist() -> Generator[datatypes.NewsletterAllowlist, None, None]:
+    for each in NewsletterAllowlist.select():
+        yield datatypes.NewsletterAllowlist({
+            'email_address': each.email_address
+        })
 
 def lookup_coordinates(location: str) -> Optional[datatypes.Coordinates]:
     '''
