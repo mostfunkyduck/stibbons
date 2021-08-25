@@ -63,8 +63,8 @@ def get_forecast():
             mimetype='application/atom+xml',
             )
 
-@app.route('/webhook', methods=["POST"])
-def webhook():
+@app.route('/webhook/sendgrid', methods=["POST"])
+def sendgrid_webhook():
     now = datetime.datetime.utcnow()
     payload = Parse(sg_config, flask.request).key_values()
     if not payload:
@@ -73,18 +73,18 @@ def webhook():
                 message='no payload'
         )
 
-    source_email = util.parse_email(payload['from'])
-    if not source_email or source_email not in config.email_allowlist():
+    target_email = util.parse_email(payload['to'])
+    if not target_email or target_email not in config.email_allowlist():
         return api.build_response(
-                status=200,
-                message=f'message accepted, but discarded because {source_email} is not an allowlisted email'
+                status=403,
+                message=f'message accepted, but discarded because {target_email} is not an allowlisted email'
         )
     entry = {
         'publish_date': now,
-        'email_from':   source_email,
+        'target_email': target_email,
         'contents':     payload.get('html') or payload.get('Text') or 'email webhook contained no content',
         'title':        payload['subject'],
-        'unique_id':    hashlib.md5(f'{source_email}{now.strftime("%Y%m%d%H%M%S")}{payload.get("email")}'.encode('utf-8')).hexdigest()
+        'unique_id':    hashlib.md5(f'{target_email}{now.strftime("%Y%m%d%H%M%S")}{payload.get("email")}'.encode('utf-8')).hexdigest()
     }
 
     db.save_feed_entry(entry)
@@ -95,8 +95,8 @@ def webhook():
 
 @app.route('/feeds/newsletter', methods=["GET"])
 def get_feed():
-    email_from = request.args.get('email_from')
-    if not email_from:
+    target_email = request.args.get('target_email')
+    if not target_email:
         return api.build_response(
                 status=400,
                 message=json.dumps({
@@ -104,14 +104,21 @@ def get_feed():
                 })
         )
 
+    if target_email not in config.email_allowlist():
+        return api.build_response(
+            status=404,
+            message=json.dumps({
+                'error': f'{target_email} is not a registered feed'
+            })
+        )
     new_feed = feedgenerator.Atom1Feed(
-        title=f'Email newsletter feed from {email_from}',
+        title=f'Email newsletter feed from {target_email}',
         link='',
-        description=f'Email newsletter from {email_from}, translated by {constants.APP_NAME}',
+        description=f'Email newsletter from {target_email}, translated by {constants.APP_NAME}',
         language='en',
     )
 
-    for entry in db.get_feed_entries(email_from=email_from):
+    for entry in db.get_feed_entries(target_email=target_email):
         new_feed.add_item(
             title=f'{entry["title"]}',
             pubdate=entry['publish_date'],

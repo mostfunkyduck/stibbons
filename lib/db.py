@@ -21,7 +21,7 @@ class CachedForecast(BaseModel):
 
 class FeedEntry(BaseModel):
     publish_date    =   peewee.DateTimeField()
-    email_from      =   peewee.CharField()
+    target_email    =   peewee.CharField()
     contents        =   peewee.CharField()
     title           =   peewee.CharField()
     unique_id       =   peewee.CharField(unique=True)
@@ -87,10 +87,10 @@ def cache_forecast(location: str, forecast: str, feed_XML: str):
         feed_XML=feed_XML
     ).on_conflict('replace').execute()
 
-def get_feed_entries(email_from: str) -> Generator[datatypes.FeedEntry, None, None]:
-    for entry in FeedEntry.select().where(FeedEntry.email_from == email_from).order_by(FeedEntry.publish_date.desc()).limit(30).execute():
+def get_feed_entries(target_email: str) -> Generator[datatypes.FeedEntry, None, None]:
+    for entry in FeedEntry.select().where(FeedEntry.target_email == target_email).order_by(FeedEntry.publish_date.desc()).limit(30).execute():
         yield datatypes.FeedEntry(
-            email_from      =   entry.email_from,
+            target_email    =   entry.target_email,
             publish_date    =   entry.publish_date,
             contents        =   entry.contents,
             title           =   entry.title,
@@ -100,7 +100,7 @@ def get_feed_entries(email_from: str) -> Generator[datatypes.FeedEntry, None, No
 def save_feed_entry(entry: datatypes.FeedEntry):
     FeedEntry.create(
        publish_date =   entry['publish_date'],
-       email_from   =   entry['email_from'],
+       target_email =   entry['target_email'],
        contents     =   entry['contents'],
        title        =   entry['title'],
        unique_id    =   entry['unique_id']
