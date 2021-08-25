@@ -2,6 +2,7 @@
 This lib builds properly formatted dicts for given types
 '''
 from typing import TypedDict, List
+import datetime
 
 ### Forecast Types
 ForecastNews = TypedDict('ForecastNews',  {
@@ -48,4 +49,12 @@ CachedForecast = TypedDict('CachedForecast', {
     'location': str,
     'forecast': FullForecast,
     'feed_XML': str
+})
+
+FeedEntry    = TypedDict('FeedEntry',  {
+    'publish_date': datetime.datetime,
+    'email_from':   str,
+    'contents':     str,
+    'title':        str,
+    'unique_id':    str,
 })

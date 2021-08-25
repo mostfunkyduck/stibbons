@@ -1,9 +1,9 @@
 import json
-from typing import Optional
+from typing import Optional, Generator
 import peewee
 from lib import config, datatypes
 
-db = peewee.SqliteDatabase(config.STIBBONS_DB_PATH)
+db = peewee.SqliteDatabase(config.db_base_path())
 
 class BaseModel(peewee.Model):
     class Meta:
@@ -19,9 +19,16 @@ class CachedForecast(BaseModel):
     forecast                =   peewee.CharField()
     feed_XML                =   peewee.CharField()
 
+class FeedEntry(BaseModel):
+    publish_date    =   peewee.DateTimeField()
+    email_from      =   peewee.CharField()
+    contents        =   peewee.CharField()
+    title           =   peewee.CharField()
+    unique_id       =   peewee.CharField(unique=True)
+
 def init():
     db.connect()
-    db.create_tables([Coordinates, CachedForecast])
+    db.create_tables([Coordinates, CachedForecast, FeedEntry])
 
 def lookup_coordinates(location: str) -> Optional[datatypes.Coordinates]:
     '''
@@ -65,3 +72,22 @@ def cache_forecast(location: str, forecast: str, feed_XML: str):
         forecast=forecast,
         feed_XML=feed_XML
     ).on_conflict('replace').execute()
+
+def get_feed_entries(email_from: str) -> Generator[datatypes.FeedEntry, None, None]:
+    for entry in FeedEntry.select().where(FeedEntry.email_from == email_from).order_by(FeedEntry.publish_date.desc()).limit(30).execute():
+        yield datatypes.FeedEntry(
+            email_from      =   entry.email_from,
+            publish_date    =   entry.publish_date,
+            contents        =   entry.contents,
+            title           =   entry.title,
+            unique_id       =   entry.unique_id
+        )
+
+def save_feed_entry(entry: datatypes.FeedEntry):
+    FeedEntry.create(
+       publish_date =   entry['publish_date'],
+       email_from   =   entry['email_from'],
+       contents     =   entry['contents'],
+       title        =   entry['title'],
+       unique_id    =   entry['unique_id']
+    )

@@ -1,15 +1,26 @@
 import datetime
 import logging
 import json
+import hashlib
+
+import feedgenerator
 import flask
-from requests import HTTPError
 from flask import request
-from lib import forecast, api, location, feed
+from requests import HTTPError
+from sendgrid.helpers.inbound.parse import Parse
+from sendgrid.helpers.inbound.config import Config
+from lib import forecast, api, location, feed, util, config, db, constants
+
+sg_config = Config()
 
 app = flask.Flask(__name__)
 ACCESS_LOGGER_NAME = 'stibbons_access_log'
 
 @app.route('/rss', methods=['GET'])
+def rss():
+    return get_forecast()
+
+@app.route('/feeds/forecast', methods=['GET'])
 def get_forecast():
     loc = request.args.get('location')
     if not loc:
@@ -46,6 +57,69 @@ def get_forecast():
         )
     raw_feed = forecast.parse_forecast(url=f'https://forecast.weather.gov/MapClick.php?lat={coordinates["latitude"]}&lon={coordinates["longitude"]}')
     xml_feed = feed.generate_feed(raw_feed, loc)
+    return api.build_response(
+            status=200,
+            message=xml_feed
+            )
+
+@app.route('/webhook', methods=["POST"])
+def webhook():
+    now = datetime.datetime.utcnow()
+    payload = Parse(sg_config, flask.request).key_values()
+    if not payload:
+        return api.build_response(
+                status=400,
+                message='no payload'
+        )
+
+    source_email = util.parse_email(payload['from'])
+    if not source_email or source_email not in config.email_allowlist():
+        return api.build_response(
+                status=200,
+                message=f'message accepted, but discarded because {source_email} is not an allowlisted email'
+        )
+    entry = {
+        'publish_date': now,
+        'email_from':   source_email,
+        'contents':     payload.get('html') or payload.get('Text') or 'email webhook contained no content',
+        'title':        payload['subject'],
+        'unique_id':    hashlib.md5(f'{source_email}{now.strftime("%Y%m%d%H%M%S")}{payload.get("email")}'.encode('utf-8')).hexdigest()
+    }
+
+    db.save_feed_entry(entry)
+    return api.build_response(
+            status=200,
+            message='entry saved'
+    )
+
+@app.route('/feeds/newsletter', methods=["GET"])
+def get_feed():
+    email_from = request.args.get('email_from')
+    if not email_from:
+        return api.build_response(
+                status=400,
+                message=json.dumps({
+                    'error': 'please specify a feed'
+                })
+        )
+
+    new_feed = feedgenerator.Atom1Feed(
+        title=f'Email newsletter feed from {email_from}',
+        link='',
+        description=f'Email newsletter from {email_from}, translated by {constants.APP_NAME}',
+        language='en',
+    )
+
+    for entry in db.get_feed_entries(email_from=email_from):
+        new_feed.add_item(
+            title=f'{entry["title"]}',
+            pubdate=entry['publish_date'],
+            unique_id=entry['unique_id'],
+            link='',
+            description='Newsletter update',
+            content=entry['contents'],
+        )
+    xml_feed = new_feed.writeString('utf-8')
     return api.build_response(
             status=200,
             message=xml_feed
