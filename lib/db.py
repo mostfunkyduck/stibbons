@@ -9,6 +9,11 @@ class BaseModel(peewee.Model):
     class Meta:
         database = db
 
+class Newsletter(BaseModel):
+    from_domain =   peewee.CharField()
+    target_email=   peewee.CharField(unique=True)
+    title       =   peewee.CharField()
+
 class Coordinates(BaseModel):
     location    =   peewee.CharField(unique=True)
     longitude   =   peewee.CharField()
@@ -31,7 +36,7 @@ class NewsletterAllowlist(BaseModel):
 
 def init():
     db.connect()
-    db.create_tables([Coordinates, CachedForecast, FeedEntry, NewsletterAllowlist])
+    db.create_tables([Coordinates, CachedForecast, FeedEntry, NewsletterAllowlist, Newsletter])
 
 def add_to_allowlist(email_address: str):
     NewsletterAllowlist.get_or_create(
@@ -104,4 +109,21 @@ def save_feed_entry(entry: datatypes.FeedEntry):
        contents     =   entry['contents'],
        title        =   entry['title'],
        unique_id    =   entry['unique_id']
+    )
+
+def add_newsletter(title: str, target_email: str, from_domain: Optional[str]):
+    Newsletter.create(
+        title=title,
+        target_email=target_email,
+        from_domain=from_domain if from_domain else ''
+    )
+
+def get_newsletter(title: str) -> Optional[datatypes.Newsletter]:
+    newsletter = Newsletter.select().where(Newsletter.title == title).execute()
+    if not newsletter:
+        return None
+    return datatypes.Newsletter(
+        target_email=newsletter.target_email,
+        title=newsletter.title,
+        from_domain=newsletter.from_domain
     )

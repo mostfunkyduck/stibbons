@@ -133,17 +133,60 @@ def get_feed():
             message=xml_feed
             )
 
+def add_newsletter() -> flask.Response:
+    body = api.get_json(flask.request)
+    if not body:
+        return api.bad_body()
+
+    # we need feed title, target email, from domain for better allowlisting
+    feed_title = body.get('title')
+    if not feed_title:
+        return api.missing_key_in_body('title')
+
+    target_email = body.get('target_email')
+    if not target_email:
+        return api.missing_key_in_body('target_email')
+
+    from_domain = body.get('from_domain')
+
+    db.add_newsletter(feed_title, target_email, from_domain)
+    return api.build_response(message=json.dumps({'message': 'newsletter added'}), status=200)
+
+def get_newsletter() -> flask.Response:
+    target_email = request.args.get('target_email')
+    if not target_email:
+        return api.bad_body() #TODO update to better message
+
+    newsletter_entry = db.get_newsletter(target_email)
+    if not newsletter_entry:
+        return api.build_response(
+            message=json.dumps({
+                'error': f'no newsletter named {target_email} was found'
+            }),
+            status=404
+        )
+
+    return api.build_response(
+        message=json.dumps({
+            'newsletter': newsletter_entry
+        }),
+        status=200
+    )
+@app.route('/newsletter', methods=['POST', 'GET'])
+def newsletter() -> flask.Response:
+    if flask.request.method == 'POST':
+        return add_newsletter()
+    elif flask.request.method == 'GET':
+        return get_newsletter()
+    return api.bad_body()
+
 @app.route('/allowlist', methods=['POST', 'GET'])
 def add_to_allowlist():
     if flask.request.method == 'POST':
-        body = flask.request.json
+        body = api.get_json(flask.request)
         if not body:
-            return api.build_response(
-                status=400,
-                message=json.dumps({
-                    'error': 'empty POST body or no application/json header'
-                })
-            )
+            return api.bad_body()
+
         if 'email' not in body:
             return api.build_response(
                 status=400,
