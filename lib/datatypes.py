@@ -53,10 +53,10 @@ CachedForecast = TypedDict('CachedForecast', {
 
 FeedEntry    = TypedDict('FeedEntry',  {
     'publish_date': datetime.datetime,
-    'target_email': str,
     'contents':     str,
     'title':        str,
     'unique_id':    str,
+    'feed':         str
 })
 
 NewsletterAllowlist =   TypedDict('NewsletterAllowlist', {
@@ -66,5 +66,7 @@ NewsletterAllowlist =   TypedDict('NewsletterAllowlist', {
 Newsletter          = TypedDict('Newsletter', {
     'target_email': str,
     'from_domain': str,
-    'title': str
+    'title': str,
+    'description': str,
+    'link': str
 })

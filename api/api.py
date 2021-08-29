@@ -2,6 +2,7 @@ import datetime
 import logging
 import json
 import hashlib
+import re
 
 import feedgenerator
 import flask
@@ -9,7 +10,7 @@ from flask import request
 from requests import HTTPError
 from sendgrid.helpers.inbound.parse import Parse
 from sendgrid.helpers.inbound.config import Config
-from lib import forecast, api, location, feed, util, config, db, constants
+from lib import forecast, api, location, feed, util, config, db, datatypes
 
 sg_config = Config()
 
@@ -74,10 +75,19 @@ def sendgrid_webhook():
         )
 
     target_email = util.parse_email(payload['to'])
-    if not target_email or target_email not in config.email_allowlist():
+    from_domain  = re.sub(r'.*@', '', util.parse_email(payload['from']))
+    if not target_email:
+        return api.build_response(
+            message=json.dumps({
+                'error': '"to" is undefined'
+            }),
+            status=400
+        )
+    newsletter_config = db.get_newsletters(target_email, from_domain)
+    if not newsletter_config:
         return api.build_response(
                 status=403,
-                message=f'message accepted, but discarded because {target_email} is not an allowlisted email'
+                message=f'message received, but discarded because no newsletter configuration was found to {target_email} from {from_domain}'
         )
     entry = {
         'publish_date': now,
@@ -96,29 +106,34 @@ def sendgrid_webhook():
 @app.route('/feeds/newsletter', methods=["GET"])
 def get_feed():
     target_email = request.args.get('target_email')
-    if not target_email:
+    from_domain =   request.args.get('from_domain')
+    if not target_email or not from_domain:
         return api.build_response(
                 status=400,
                 message=json.dumps({
-                    'error': 'please specify a feed'
+                    'error': 'please specify a feed using target_email and from_domain arguments'
                 })
         )
 
-    if target_email not in config.email_allowlist():
+    # TODO change this name
+    newsletter_configs = [each for each in db.get_newsletters(target_email, from_domain)]
+    if not newsletter_configs:
         return api.build_response(
             status=404,
             message=json.dumps({
-                'error': f'{target_email} is not a registered feed'
+                'error': f'no registered newsletter from {from_domain} to {target_email}'
             })
         )
+
+    newsletter_config = newsletter_configs[0] # TODO should always be 1 result from a query of both target email and from domain
     new_feed = feedgenerator.Atom1Feed(
-        title=f'Email newsletter feed from {target_email}',
-        link='',
-        description=f'Email newsletter from {target_email}, translated by {constants.APP_NAME}',
+        title=f'{newsletter_config["title"]}',
+        link='{newsletter_config["link"]}',
+        description=f'{newsletter_config["description"]}',
         language='en',
     )
 
-    for entry in db.get_feed_entries(target_email=target_email):
+    for entry in db.get_feed_entries(newsletter_config['feed']):
         new_feed.add_item(
             title=f'{entry["title"]}',
             pubdate=entry['publish_date'],
@@ -148,36 +163,55 @@ def add_newsletter() -> flask.Response:
         return api.missing_key_in_body('target_email')
 
     from_domain = body.get('from_domain')
+    if not from_domain:
+        return api.missing_key_in_body('from_domain')
 
-    db.add_newsletter(feed_title, target_email, from_domain)
+    description = body.get('description') or ''
+    link        = body.get('link') or ''
+    newsletter_config = datatypes.Newsletter(
+        title           =   feed_title,
+        target_email    =   target_email,
+        description     =   description,
+        from_domain     =   from_domain,
+        link            =   link
+    )
+    db.add_newsletter(newsletter_config)
     return api.build_response(message=json.dumps({'message': 'newsletter added'}), status=200)
 
-def get_newsletter() -> flask.Response:
+def get_newsletters() -> flask.Response:
     target_email = request.args.get('target_email')
-    if not target_email:
-        return api.bad_body() #TODO update to better message
+    from_domain  = request.args.get('from_domain')
 
-    newsletter_entry = db.get_newsletter(target_email)
-    if not newsletter_entry:
+    if not target_email and not from_domain:
         return api.build_response(
             message=json.dumps({
-                'error': f'no newsletter named {target_email} was found'
+                'error': 'please specify either a target_email, from_domain, or both'
+            }),
+            status=400
+        )
+
+    newsletter_configs = db.get_newsletters(target_email, from_domain)
+    if not newsletter_configs:
+        return api.build_response(
+            message=json.dumps({
+                'error': f'no newsletter to {target_email} from {from_domain} was found'
             }),
             status=404
         )
 
     return api.build_response(
         message=json.dumps({
-            'newsletter': newsletter_entry
+            'newsletters': [newsletter_config for newsletter_config in newsletter_configs]
         }),
         status=200
     )
-@app.route('/newsletter', methods=['POST', 'GET'])
+
+@app.route('/newsletters', methods=['POST', 'GET'])
 def newsletter() -> flask.Response:
     if flask.request.method == 'POST':
         return add_newsletter()
     elif flask.request.method == 'GET':
-        return get_newsletter()
+        return get_newsletters()
     return api.bad_body()
 
 @app.route('/allowlist', methods=['POST', 'GET'])

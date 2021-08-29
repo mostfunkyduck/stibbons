@@ -11,28 +11,33 @@ class BaseModel(peewee.Model):
 
 class Newsletter(BaseModel):
     from_domain =   peewee.CharField()
-    target_email=   peewee.CharField(unique=True)
+    target_email=   peewee.CharField()
     title       =   peewee.CharField()
+    description =   peewee.CharField()
+    link        =   peewee.CharField()
+
+    class Meta:
+        primary_key =   peewee.CompositeKey('from_domain', 'target_email')
 
 class Coordinates(BaseModel):
-    location    =   peewee.CharField(unique=True)
+    location    =   peewee.CharField(primary_key=True)
     longitude   =   peewee.CharField()
     latitude    =   peewee.CharField()
 
 class CachedForecast(BaseModel):
-    location                =   peewee.CharField(unique=True)
+    location                =   peewee.CharField(primary_key=True)
     forecast                =   peewee.CharField()
     feed_XML                =   peewee.CharField()
 
 class FeedEntry(BaseModel):
     publish_date    =   peewee.DateTimeField()
-    target_email    =   peewee.CharField()
     contents        =   peewee.CharField()
     title           =   peewee.CharField()
-    unique_id       =   peewee.CharField(unique=True)
+    unique_id       =   peewee.CharField(primary_key=True)
+    feed            =   peewee.CharField()
 
 class NewsletterAllowlist(BaseModel):
-    email_address   =   peewee.CharField(unique=True)
+    email_address   =   peewee.CharField(primary_key=True)
 
 def init():
     db.connect()
@@ -92,10 +97,10 @@ def cache_forecast(location: str, forecast: str, feed_XML: str):
         feed_XML=feed_XML
     ).on_conflict('replace').execute()
 
-def get_feed_entries(target_email: str) -> Generator[datatypes.FeedEntry, None, None]:
-    for entry in FeedEntry.select().where(FeedEntry.target_email == target_email).order_by(FeedEntry.publish_date.desc()).limit(30).execute():
+def get_feed_entries(feed: str) -> Generator[datatypes.FeedEntry, None, None]:
+    for entry in FeedEntry.select().where(FeedEntry.feed == feed).order_by(FeedEntry.publish_date.desc()).limit(30).execute():
         yield datatypes.FeedEntry(
-            target_email    =   entry.target_email,
+            feed            =   entry.feed,
             publish_date    =   entry.publish_date,
             contents        =   entry.contents,
             title           =   entry.title,
@@ -104,26 +109,41 @@ def get_feed_entries(target_email: str) -> Generator[datatypes.FeedEntry, None, 
 
 def save_feed_entry(entry: datatypes.FeedEntry):
     FeedEntry.create(
+       feed         =   entry['feed'],
        publish_date =   entry['publish_date'],
-       target_email =   entry['target_email'],
        contents     =   entry['contents'],
        title        =   entry['title'],
        unique_id    =   entry['unique_id']
     )
 
-def add_newsletter(title: str, target_email: str, from_domain: Optional[str]):
+def add_newsletter(newsletter: datatypes.Newsletter):
     Newsletter.create(
-        title=title,
-        target_email=target_email,
-        from_domain=from_domain if from_domain else ''
+        title           =   newsletter['title'],
+        target_email    =   newsletter['target_email'],
+        from_domain     =   newsletter['from_domain'] if 'from_domain' in newsletter else '',
+        description     =   newsletter['description'],
+        link            =   newsletter['link']
     )
 
-def get_newsletter(title: str) -> Optional[datatypes.Newsletter]:
-    newsletter = Newsletter.select().where(Newsletter.title == title).execute()
-    if not newsletter:
+def get_newsletters(target_email: Optional[str], from_domain: Optional[str]) -> Optional[Generator[datatypes.Newsletter, None, None]]:
+    if from_domain and target_email:
+        newsletters = Newsletter.select().where(Newsletter.from_domain == from_domain and Newsletter.target_email == target_email).execute()
+    elif from_domain:
+        newsletters = Newsletter.select().where(Newsletter.from_domain == from_domain).execute()
+    elif target_email:
+        newsletters = Newsletter.select().where(Newsletter.target_email == target_email).execute()
+    else:
         return None
-    return datatypes.Newsletter(
-        target_email=newsletter.target_email,
-        title=newsletter.title,
-        from_domain=newsletter.from_domain
-    )
+
+    if not newsletters:
+        return None
+
+
+    for newsletter in newsletters:
+        yield datatypes.Newsletter(
+            target_email=newsletter.target_email,
+            title=newsletter.title,
+            from_domain=newsletter.from_domain,
+            description=newsletter.description,
+            link=newsletter.link
+        )
