@@ -1,13 +1,14 @@
 [packages]
-scrapy        = "*"
-flask         = "*"
-requests      = "*"
-geopy         = "*"
-feedgenerator = "*"
-peewee        = "*"
-waitress      = "*"
-sendgrid      = "*"
-pyyaml        = "*"
+scrapy              = "*"
+flask               = "*"
+requests            = "*"
+geopy               = "*"
+feedgenerator       = "*"
+peewee              = "*"
+waitress            = "*"
+sendgrid            = "*"
+pyyaml              = "*"
+flask_expects_json  = "*"
 
 [dev-packages]
 pylint          = "*"

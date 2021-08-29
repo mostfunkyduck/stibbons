@@ -56,17 +56,18 @@ FeedEntry    = TypedDict('FeedEntry',  {
     'contents':     str,
     'title':        str,
     'unique_id':    str,
-    'feed':         str
+    'feed_id':      str
 })
 
-NewsletterAllowlist =   TypedDict('NewsletterAllowlist', {
-    'email_address': str
+Feed         = TypedDict('Feed', {
+    'feed_id':      str,
+    'title':        str,
+    'description':  str,
+    'link':         str
 })
 
 Newsletter          = TypedDict('Newsletter', {
     'target_email': str,
-    'from_domain': str,
-    'title': str,
-    'description': str,
-    'link': str
+    'from_domain':  str,
+    'feed':         Feed
 })
