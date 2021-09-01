@@ -5,7 +5,6 @@ import re
 
 import feedgenerator
 import flask
-from flask_expects_json import expects_json
 from flask import request
 from requests import HTTPError
 from sendgrid.helpers.inbound.parse import Parse
@@ -16,6 +15,7 @@ sg_config = Config()
 
 app = flask.Flask(__name__)
 ACCESS_LOGGER_NAME = 'stibbons_access_log'
+
 
 @app.route('/rss', methods=['GET'])
 def rss():
@@ -121,7 +121,6 @@ def get_feed():
                 })
         )
 
-    # TODO change this name
     newsletter_configs = [each for each in db.get_newsletters(target_email, from_domain)]
     if not newsletter_configs:
         return api.build_response(
@@ -184,14 +183,6 @@ def get_newsletters() -> flask.Response:
     target_email = request.args.get('target_email')
     from_domain  = request.args.get('from_domain')
 
-    if not target_email and not from_domain:
-        return api.build_response(
-            message=json.dumps({
-                'error': 'please specify either a target_email, from_domain, or both'
-            }),
-            status=400
-        )
-
     newsletter_configs = db.get_newsletters(target_email, from_domain)
     if not newsletter_configs:
         return api.build_response(
@@ -209,7 +200,7 @@ def get_newsletters() -> flask.Response:
     )
 
 @app.route('/newsletters', methods=['POST', 'GET'])
-@expects_json(schema.newsletter, ignore_for=['GET'])
+@schema.validate_payload(schema.newsletter, methods=['POST'])
 def newsletter() -> flask.Response:
     if flask.request.method == 'POST':
         return add_newsletter()

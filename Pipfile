@@ -8,7 +8,7 @@ peewee              = "*"
 waitress            = "*"
 sendgrid            = "*"
 pyyaml              = "*"
-flask_expects_json  = "*"
+jsonschema          = "*"
 
 [dev-packages]
 pylint          = "*"

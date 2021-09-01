@@ -121,7 +121,7 @@ def get_newsletters(target_email: Optional[str], from_domain: Optional[str]) -> 
     elif target_email:
         newsletters = Newsletter.select().where(Newsletter.target_email == target_email).execute()
     else:
-        return None
+        newsletters = Newsletter.select().execute()
 
     if not newsletters:
         return None
