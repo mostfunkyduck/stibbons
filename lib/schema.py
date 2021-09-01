@@ -10,6 +10,14 @@ newsletter = {
     'type': 'object',
     'required': ['target_email', 'from_domain', 'title'],
     'properties': {
+        'link': {
+            'type': 'string',
+            'description': 'a link to the newsletter\'s site',
+        },
+        'description': {
+            'type': 'string',
+            'description': 'description of the newsletter',
+        },
         'title': {
             'type': 'string',
             'description': 'the user facing title of the newsletter',
