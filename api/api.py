@@ -91,7 +91,7 @@ def sendgrid_webhook():
         )
 
     newsletter_config   = newsletter_configs[0]
-    newsletter_feed     = db.get_feed(newsletter_config['feed_id'])
+    newsletter_feed     = newsletter_config['feed']
     if not newsletter_feed:
         return api.build_response(
                 status=403,
@@ -110,45 +110,25 @@ def sendgrid_webhook():
     )
 
 @app.route('/feeds/newsletter', methods=["GET"])
-def get_feed():
-    target_email = request.args.get('target_email')
-    from_domain =   request.args.get('from_domain')
-    if not target_email or not from_domain:
-        return api.build_response(
-                status=400,
-                message=json.dumps({
-                    'error': 'please specify a feed using target_email and from_domain arguments'
-                })
-        )
+def get_newsletter_feed():
+    feed_id = flask.request.args['feed']
+    feed_config = db.get_feed(feed_id)
 
-    newsletter_configs = [each for each in db.get_newsletters(target_email, from_domain)]
-    if not newsletter_configs:
-        return api.build_response(
-            status=404,
-            message=json.dumps({
-                'error': f'no registered newsletter from {from_domain} to {target_email}'
-            })
-        )
-
-    if len(newsletter_configs) > 1:
-        logging.error('got too many newsletter configs, using the 0th')
-        logging.error('%s', newsletter_configs)
-    newsletter_config = newsletter_configs[0]
     new_feed = feedgenerator.Atom1Feed(
-        title=newsletter_config['feed']['title'],
-        link=newsletter_config['feed']['link'],
-        description=newsletter_config['feed']['description'],
+        title       =   feed_config['title'],
+        link        =   feed_config['link'],
+        description =   feed_config['description'],
         language='en',
     )
 
-    for entry in db.get_feed_entries(newsletter_config['feed']['feed_id']):
+    for entry in db.get_feed_entries(feed_id):
         new_feed.add_item(
-            title=f'{entry["title"]}',
-            pubdate=entry['publish_date'],
-            unique_id=entry['unique_id'],
-            link='',
-            description='Newsletter update',
-            content=entry['contents'],
+            title       =   entry['title'],
+            pubdate     =   entry['publish_date'],
+            unique_id   =   entry['unique_id'],
+            link        =   '',
+            description =   'Newsletter update',
+            content     =   entry['contents'],
         )
     xml_feed = new_feed.writeString('utf-8')
     return api.build_response(
@@ -173,9 +153,12 @@ def add_newsletter() -> flask.Response:
         target_email    =   target_email,
         from_domain     =   from_domain,
     )
-    db.add_newsletter_and_feed(newsletter_feed, newsletter_config)
+    feed_id = db.add_newsletter_and_feed(newsletter_feed, newsletter_config)
     return api.build_response(
-            message=json.dumps({'message': 'newsletter added'}),
+            message=json.dumps({
+                'id': str(feed_id),
+                'message': 'newsletter added'
+            }),
             status=200
             )
 

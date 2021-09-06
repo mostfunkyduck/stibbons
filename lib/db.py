@@ -115,13 +115,13 @@ def save_feed_entry(entry: datatypes.FeedEntry):
 
 def get_newsletters(target_email: Optional[str], from_domain: Optional[str]) -> Optional[Generator[datatypes.Newsletter, None, None]]:
     if from_domain and target_email:
-        newsletters = Newsletter.select().where(Newsletter.from_domain == from_domain and Newsletter.target_email == target_email).execute()
+        newsletters = Newsletter.select().where(Newsletter.from_domain == from_domain).where(Newsletter.target_email == target_email).execute()
     elif from_domain:
         newsletters = Newsletter.select().where(Newsletter.from_domain == from_domain).execute()
     elif target_email:
         newsletters = Newsletter.select().where(Newsletter.target_email == target_email).execute()
     else:
-        newsletters = Newsletter.select().execute()
+        newsletters = Newsletter.select()
 
     if not newsletters:
         return None
@@ -147,17 +147,16 @@ def add_feed(feed: datatypes.Feed) -> str:
     ).feed_id
 
 @db.atomic()
-def add_newsletter_and_feed(feed: datatypes.Feed, newsletter: datatypes.Newsletter):
-    feed_id = Feed.create(
-        title       =   feed['title'],
-        description =   feed['description'],
-        link        =   feed['link']
-    )
+def add_newsletter_and_feed(feed: datatypes.Feed, newsletter: datatypes.Newsletter) -> str:
+    feed_id = add_feed(feed)
+
     Newsletter.create(
         feed_id         =   feed_id,
         target_email    =   newsletter['target_email'],
         from_domain     =   newsletter['from_domain'] if 'from_domain' in newsletter else ''
     )
+
+    return feed_id
 
 def get_feed(feed_id: str) -> Optional[datatypes.Feed]:
     res = Feed.select().where(Feed.feed_id == feed_id).execute()
