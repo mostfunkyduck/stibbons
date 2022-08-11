@@ -1,5 +1,6 @@
 import json
 import hashlib
+import datetime
 
 from typing import Optional, Generator
 import peewee
@@ -35,6 +36,7 @@ class CachedForecast(BaseModel):
     location                =   peewee.CharField(primary_key=True)
     forecast                =   peewee.CharField()
     feed_XML                =   peewee.CharField()
+    cache_time              =   peewee.DateTimeField()
 
 class FeedEntry(BaseModel):
     publish_date    =   peewee.DateTimeField()
@@ -79,7 +81,8 @@ def lookup_cached_forecast(location: str) -> Optional[datatypes.CachedForecast]:
         return datatypes.CachedForecast({
            'location': cached.location,
            'forecast': json.loads(cached.forecast),
-           'feed_XML': cached.feed_XML
+           'feed_XML': cached.feed_XML,
+           'cache_time': cached.cache_time
         })
     except peewee.DoesNotExist:
         return None
@@ -88,6 +91,7 @@ def cache_forecast(location: str, forecast: str, feed_XML: str):
     CachedForecast.insert(
         location=location,
         forecast=forecast,
+        cache_time=datetime.datetime.now(),
         feed_XML=feed_XML
     ).on_conflict('replace').execute()
 

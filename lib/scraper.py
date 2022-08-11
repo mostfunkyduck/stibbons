@@ -21,6 +21,10 @@ xpaths = {
 
     'forecast_div':             '//*[@id="seven-day-forecast"]',
     'title_text':               '//h2[@class="panel-title"]/text()',
+    
+    'current_conditions_div':   '//*[@id="current_conditions-summary"]',
+    'current_conditions':        '//p[@class="myforecast-current"]/text()',
+    'current_farenheit':        '//p[@class="myforecast-current-lrg"]/text()',
     # when there's a current hazard, this li will exist, otherwise? not sure, probably doesn't
     'current_hazard_advisory':  './/li[contains(@class, "current-hazard")]//*[@id="headline-detail-now"]//div',
     # relative to the advisor <li>
@@ -37,11 +41,22 @@ xpaths = {
     # When this was last updated
     'last_updated':             '//div[@id="about_forecast"]/div[2]/div[2]/text()'
 }
+
 def retrieve_text(selector: Selector) -> str:
     text = ' '.join(selector.getall()) or ''
     if text:
         text = text.strip()
     return text
+
+def current_conditions(selector: Selector) -> str:
+    return retrieve_text(selector.xpath(
+        xpaths['current_conditions_div'] + xpaths['current_conditions']
+    ))
+
+def current_temperature(selector: Selector) -> str:
+    return retrieve_text(selector.xpath(
+        xpaths['current_conditions_div'] + xpaths['current_farenheit']
+    ))
 
 def last_updated(selector: Selector) -> str:
     text = retrieve_text(selector.xpath(

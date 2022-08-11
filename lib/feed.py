@@ -43,7 +43,7 @@ def gen_news(items: List[datatypes.ForecastNews]):
             <p><i>{item['body']}</i></p>''')
     return "<br/>".join(news_items) or 'None'
 
-def generate_feed(forecast: datatypes.FullForecast, location: str) -> str:
+def generate_feed(forecast: datatypes.FullForecast, location: str, cached_forecast: datatypes.CachedForecast) -> str:
     now = datetime.datetime.utcnow()
     feed = feedgenerator.Atom1Feed(
         title=f'Weather for {location}',
@@ -51,7 +51,6 @@ def generate_feed(forecast: datatypes.FullForecast, location: str) -> str:
         description='Weather forecasts, backed by data lovingly scraped from NOAA',
         language='en',
     )
-    cached_forecast = db.lookup_cached_forecast(location)
 
     # only publish a new post if the forecast's "last_updated" field has changed
     if cached_forecast and cached_forecast['forecast']['last_updated'] == forecast['last_updated']:
@@ -67,15 +66,20 @@ def generate_feed(forecast: datatypes.FullForecast, location: str) -> str:
 
     full_forecast = gen_forecast(forecast['forecast']['daily_forecasts'])
 
-    current_hazards = "<br/>".join(forecast['forecast']['current_hazards']) or "None"
+    current_hazards = '<br/>'.join(forecast['forecast']['current_hazards']) or 'None'
 
+    current_conditions = f'{forecast["current_conditions"]["current_conditions"]}: {forecast["current_conditions"]["current_temperature"]}'
     feed.add_item(
-        title=f'{forecast["forecast"]["title"]} - {forecast["last_updated"]}',
+        title=f'{forecast["forecast"]["title"]} - {current_conditions} - {forecast["last_updated"]}',
         pubdate=now,
         unique_id=forecast["last_updated"],
         link=forecast['url'],
         description='Current Forecast',
-        content=f'''<h1>Current News</h1>
+        content=f'''<h1>Current Conditions</h1>
+<p>
+<b>{current_conditions}</b>
+</p>
+<h1>Current News</h1>
 <p>
 <b>{news}</b>
 </p>

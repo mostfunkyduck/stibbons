@@ -56,8 +56,16 @@ def get_forecast():
                 'error': f'{location} could not be converted to valid coordinates'
             })
         )
-    raw_feed = forecast.parse_forecast(url=f'https://forecast.weather.gov/MapClick.php?lat={coordinates["latitude"]}&lon={coordinates["longitude"]}')
-    xml_feed = feed.generate_feed(raw_feed, loc)
+    cached_forecast = db.lookup_cached_forecast(loc)
+    xml_feed = ''
+    if cached_forecast:
+        age = datetime.datetime.now() - cached_forecast['cache_time']
+        if age.total_seconds() < 3600:
+            xml_feed = cached_forecast['feed_XML']
+
+    if xml_feed == '':
+        raw_feed = forecast.parse_forecast(url=f'https://forecast.weather.gov/MapClick.php?lat={coordinates["latitude"]}&lon={coordinates["longitude"]}')
+        xml_feed = feed.generate_feed(raw_feed, loc, cached_forecast)
     return api.build_response(
             status=200,
             message=xml_feed,

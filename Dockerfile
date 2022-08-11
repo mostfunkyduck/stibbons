@@ -11,5 +11,6 @@ RUN pipenv install
 
 COPY . .
 
+RUN mkdir -p /usr/src/stibbons/db
 ENV STIBBONS_DB_PATH=/usr/src/stibbons/db/stibbons.db
 ENTRYPOINT ["pipenv", "run", "./start-api.py"]
